@@ -64,37 +64,42 @@ def makeDAAPHandlerClass(server_name, cache, md_cache, container_cache):
         itunes_re = '^(?://[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]+)?'
         drop_q = '(?:\\?.*)?$'
 
+        URLS = {
+            '/$' : "login",
+            '/server-info$' : "server_info",
+            '/content-codes$' : "content_codes",
+            '/databases$' : "database_list",
+            '/databases/([0-9]+)/items$' : "item_list",
+            '/databases/([0-9]+)/items/([0-9]+)\\.([0-9a-z]+)' + drop_q : "item",
+            '/databases/([0-9]+)/containers$' : "container_list",
+            '/databases/([0-9]+)/containers/([0-9]+)/items$' : "container_item_list",
+            '^/login$' : "login",
+            '^/logout$' : "logout",
+            '^/update$' : "update",
+        }
+
+        _URLS = {}
+        for url in URLS.keys():
+          k = re.compile(itunes_re + url)
+          _URLS[k] = URLS.get(url)
+
+        URLS = _URLS
+
         def do_GET(self):
             parsed_path = urlparse.urlparse(self.path).path
-            if re.match(self.itunes_re + "/$", parsed_path):
-                self.do_GET_login()
-            elif re.match(self.itunes_re + '/server-info$', parsed_path):
-                self.do_GET_server_info()
-            elif re.match(self.itunes_re + '/content-codes$', parsed_path):
-                self.do_GET_content_codes()
-            elif re.match(self.itunes_re + '/databases$', parsed_path):
-                self.do_GET_database_list()
-            elif re.match(self.itunes_re + '/databases/([0-9]+)/items$', parsed_path):
-                md = re.match(self.itunes_re + '/databases/([0-9]+)/items$', parsed_path)
-                self.do_GET_item_list(md.group(1))
-            elif re.match(self.itunes_re + '/databases/([0-9]+)/items/([0-9]+)\\.([0-9a-z]+)' + self.drop_q, parsed_path):
-                md = re.match(self.itunes_re + '/databases/([0-9]+)/items/([0-9]+)\\.([0-9a-z]+)' + self.drop_q, parsed_path)
-                self.do_GET_item(md.group(1), md.group(2), md.group(3))
-            elif re.match(self.itunes_re + '/databases/([0-9]+)/containers$', parsed_path):
-                md = re.match(self.itunes_re + '/databases/([0-9]+)/containers$', parsed_path)
-                self.do_GET_container_list(md.group(1))
-            elif re.match(self.itunes_re + '/databases/([0-9]+)/containers/([0-9]+)/items$', parsed_path):
-                md = re.match(self.itunes_re + '/databases/([0-9]+)/containers/([0-9]+)/items$', parsed_path)
-                self.do_GET_container_item_list(md.group(1), md.group(2))
-            elif re.match('^/login$', parsed_path):
-                self.do_GET_login()
-            elif re.match('^/logout$', parsed_path):
-                self.do_GET_logout()
-            elif re.match('^/update$', parsed_path):
-                self.do_GET_update()
+            for k,v in self.URLS.iteritems():
+              md = re.match(k, parsed_path)
+
+              if not md:
+                continue
+
+              args = md.groups()
+              func = getattr(self, "do_GET_" + v)
+              func(*args)
+              return
+
             else:
                 self.send_error(404)
-            return
 
         def do_HEAD(self):
             self.isHEAD = True
