@@ -13,32 +13,29 @@
 #You should have received a copy of the GNU General Public License
 #along with Spydaap. If not, see <http://www.gnu.org/licenses/>.
 
-import warnings
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    import md5
-
 import os
 
 class MetadataCache(object):
-    def __init__(self, cache_dir, parsers):
-        self.parsers = parsers
-        self.dir = cache_dir
+  def __init__(self, cache_dir, parsers):
+    self.parsers = parsers
+    self.dir = cache_dir
 
-    def build(self, dir, link=False):
-        for path, dirs, files in os.walk(dir):
-            for d in dirs:
-                if os.path.islink(os.path.join(path, d)):
-                    self.build(os.path.join(path,d), True)
-            for fn in files:
-                ffn = os.path.join(path, fn)
-                digest = md5.md5(ffn).hexdigest()
+  def build(self, dir, link=False):
+    for path, dirs, files in os.walk(dir):
+      for d in dirs:
+        if os.path.islink(os.path.join(path, d)):
+            self.build(os.path.join(path,d), True)
 
-                # TODO: check if newer
-                # os.stat(ffn).st_mtime
-                print ffn
+      for fn in files:
+        ffn = os.path.join(path, fn)
+        digest = md5.md5(ffn).hexdigest()
 
-                for p in self.parsers:
-                  if not p.understands(ffn):                                   continue
+        # TODO: check if newer
+        # os.stat(ffn).st_mtime
+        print ffn
 
-                  m = p.parse(ffn)
+        for p in self.parsers:
+          if not p.understands(ffn):
+            continue
+
+          m = p.parse(ffn)
