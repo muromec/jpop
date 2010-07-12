@@ -14,6 +14,7 @@
 #along with Spydaap. If not, see <http://www.gnu.org/licenses/>.
 
 import os, re
+from hashlib import md5
 
 class Parser:
     def handle(self, md, data=None):
@@ -45,7 +46,10 @@ class Parser:
         return 0
 
     def parse(self, filename):
-      d = {'file': filename}
+      d = {
+          'file': filename,
+          'fhash' : md5(filename).hexdigest(),
+      }
       md = self.parser_get(filename)
 
       if md and md.tags != None:

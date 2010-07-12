@@ -13,7 +13,7 @@ class DB(object):
 
   def add(self, media):
     key = media[self.name]
-    fname = media['file']
+    fname = media['fhash']
 
     self.drop(fname)
 
@@ -78,7 +78,8 @@ class Manager(object):
   ALL = {}
   @classmethod
   def process(cls, media):
-    cls.ALL[media['file']] = media['mtime']
+    fhash = media['fhash']
+    cls.ALL[fhash] = media['mtime'], media.pop('file')
 
     for name in cls.NAMES:
       if name not in media:
@@ -113,7 +114,7 @@ class Manager(object):
 
   @classmethod
   def remove_missing(cls):
-    for fname in cls.ALL.keys():
+    for mtime, fname in cls.ALL.values():
       if os.access(fname, 0):
         continue
 

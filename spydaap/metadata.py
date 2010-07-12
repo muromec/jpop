@@ -16,6 +16,7 @@
 import os
 
 import db
+from hashlib import md5
 
 class MetadataCache(object):
   def __init__(self, cache_dir, parsers):
@@ -34,11 +35,11 @@ class MetadataCache(object):
       for fn in files:
         ffn = os.path.join(path, fn)
 
-        # TODO: check if newer
-        # os.stat(ffn).st_mtime
-        if ffn in db.Manager.ALL:
+        fhash = md5(ffn).hexdigest()
+
+        if fhash in db.Manager.ALL:
           current = int(os.stat(ffn).st_mtime)
-          saved = db.Manager.ALL.get(ffn)
+          saved, _ffn = db.Manager.ALL.get(fhash)
 
           if saved == current:
             self.cached+=1
@@ -57,4 +58,5 @@ class MetadataCache(object):
         else:
           self.skipped+=1
 
+    print self.skipped, self.parsed, self.cached
     db.Manager.flush()

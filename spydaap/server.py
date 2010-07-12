@@ -54,6 +54,7 @@ class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         '/db$' : 'db_list',
         '/db/(%s)$' % DB_REGEX : 'db_keys',
         '/db/(%s)/(.*)$' % DB_REGEX : 'db_value',
+        '/fetch/([a-f0-9]{32})$' : 'fetch',
     }
 
     _URLS = {}
@@ -75,7 +76,12 @@ class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
           args = md.groups()
           func = getattr(self, "do_GET_" + v)
           ret = func(*args)
-          self.h(dumps(ret))
+
+          if not ret:
+            self.send_error(404)
+            return
+
+          self.h(ret if type(ret) == file else dumps(ret))
           return
 
         else:
@@ -108,3 +114,10 @@ class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def do_GET_db_list(self,):
         return ("list", Manager.DB.keys())
 
+    def do_GET_fetch(self, fhash):
+        if not fhash in Manager.ALL:
+          return
+
+        mtime, fname = Manager.ALL.get(fhash)
+
+        return open(fname, 'rb')
