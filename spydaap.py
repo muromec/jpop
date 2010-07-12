@@ -15,8 +15,7 @@
 #along with Spydaap. If not, see <http://www.gnu.org/licenses/>.
 
 import BaseHTTPServer, SocketServer, getopt, grp, httplib, logging, os, pwd, select, signal, spydaap, sys
-import spydaap.daap, spydaap.metadata, spydaap.containers, spydaap.cache, spydaap.server, spydaap.zeroconf
-from spydaap.daap import do
+import spydaap.metadata, spydaap.containers, spydaap.cache, spydaap.server, spydaap.zeroconf
 import config
 
 logging.basicConfig()
@@ -55,8 +54,8 @@ class MyThreadedHTTPServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServe
 
 def rebuild_cache(signum=None, frame=None):
     md_cache.build(os.path.abspath(spydaap.media_path))
-    container_cache.clean()
-    container_cache.build(md_cache)
+    #container_cache.clean()
+    #container_cache.build(md_cache)
     cache.clean()
 
 def usage():
@@ -77,11 +76,13 @@ def really_main():
     rebuild_cache()
     zeroconf = spydaap.zeroconf.Zeroconf(spydaap.server_name,
                                          spydaap.port,  
-                                         stype="_daap._tcp")
+                                         stype="_jpop._tcp")
     zeroconf.publish()
     log.warn("Listening.")
-    httpd = MyThreadedHTTPServer(('0.0.0.0', spydaap.port), 
-                                 spydaap.server.makeDAAPHandlerClass(spydaap.server_name, cache, md_cache, container_cache))
+    httpd = MyThreadedHTTPServer(
+        ('0.0.0.0', spydaap.port), 
+        spydaap.server.DAAPHandler    
+    )
     
     signal.signal(signal.SIGTERM, make_shutdown(httpd))
     signal.signal(signal.SIGHUP, rebuild_cache)
