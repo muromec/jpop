@@ -14,6 +14,7 @@
 #along with Spydaap. If not, see <http://www.gnu.org/licenses/>.
 
 import os, struct, md5, spydaap.cache
+from simplejson import dumps
 
 class ContainerCache(spydaap.cache.OrderedCache):
     def __init__(self, cache_dir, container_list):
@@ -36,27 +37,20 @@ class ContainerCache(spydaap.cache.OrderedCache):
         for pl in self.container_list:
             entries = [n for n in md_cache if pl.contains(n)]
             pl.sort(entries)
-            d = do('daap.playlistsongs',
-                   [ do('dmap.status', 200),
-                     do('dmap.updatetype', 0),
-                     do('dmap.specifiedtotalcount', len(entries)),
-                     do('dmap.returnedcount', len(entries)),
-                     do('dmap.listing',
-                        [ build_do (md,id) for (id, md) in enumerate(entries) ])
-                     ])
-            ContainerCacheItem.write_entry(self.dir, pl.name, d, len(entries))
+            d = {
+              'count' : len(entries),
+              'entries' : map(lambda x : x.pid, entries),
+            }
+            ContainerCacheItem.write_entry(self.dir, pl.name, d,)
             pid_list.append(md5.md5(pl.name).hexdigest())
         self.build_index(pid_list)
         
 class ContainerCacheItem(spydaap.cache.OrderedCacheItem):
     @classmethod
-    def write_entry(self, dir, name, d, length):
-        data = struct.pack('!i', length)
-        data = data + struct.pack('!i%ss' % len(name), len(name), name)
-        data = data + d.encode()
+    def write_entry(self, dir, name, d):
         cachefn = os.path.join(dir, md5.md5(name).hexdigest())
         f = open(cachefn, 'w')
-        f.write(data)
+        f.write(dumps(d))
         f.close()
 
     def __init__(self, cache, pid, id):

@@ -54,8 +54,8 @@ class MyThreadedHTTPServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServe
 
 def rebuild_cache(signum=None, frame=None):
     md_cache.build(os.path.abspath(spydaap.media_path))
-    #container_cache.clean()
-    #container_cache.build(md_cache)
+    container_cache.clean()
+    container_cache.build(md_cache)
     cache.clean()
 
 def usage():
