@@ -15,26 +15,14 @@
 #along with Spydaap. If not, see <http://www.gnu.org/licenses/>.
 
 import BaseHTTPServer, SocketServer, getopt, grp, httplib, logging, os, pwd, select, signal, spydaap, sys
-import spydaap.metadata, spydaap.containers, spydaap.cache, spydaap.server, spydaap.zeroconf
+import spydaap.metadata, spydaap.server, spydaap.zeroconf
 import config
 
 logging.basicConfig()
 log = logging.getLogger('spydaap')
 
-cache = spydaap.cache.Cache(spydaap.cache_dir)
 md_cache = spydaap.metadata.MetadataCache(os.path.join(spydaap.cache_dir, "media"), spydaap.parsers)
-container_cache = spydaap.containers.ContainerCache(os.path.join(spydaap.cache_dir, "containers"), spydaap.container_list)
 keep_running = True
-
-class Log:
-    """file like for writes with auto flush after each write
-    to ensure that everything is logged, even during an
-    unexpected exit."""
-    def __init__(self, f):
-        self.f = f
-    def write(self, s):
-        self.f.write(s)
-        self.f.flush()
 
 class MyThreadedHTTPServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
     """Handle requests in a separate thread."""
@@ -54,9 +42,6 @@ class MyThreadedHTTPServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServe
 
 def rebuild_cache(signum=None, frame=None):
     md_cache.build(os.path.abspath(spydaap.media_path))
-    container_cache.clean()
-    container_cache.build(md_cache)
-    cache.clean()
 
 def usage():
     sys.stderr.write("Usage: %s [OPTION]\n"%(sys.argv[0]))
@@ -137,34 +122,7 @@ def main():
     if not(daemonize):
         really_main()
     else:
-        #redirect outputs to a logfile
-        sys.stdout = sys.stderr = Log(open(logfile, 'a+'))
-        try:
-            pid = os.fork()
-            if pid > 0:
-                # exit first parent
-                sys.exit(0)
-        except OSError, e:
-            sys.stderr.write("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
-            sys.exit(1)
-
-        # decouple from parent environment
-        os.chdir("/")   #don't prevent unmounting....
-        os.setsid()
-        os.umask(0)
-
-        # do second fork
-        try:
-            pid = os.fork()
-            if pid > 0:
-                # exit from second parent, print eventual PID before
-                #print "Daemon PID %d" % pid
-                open(pidfile,'w').write("%d"%pid)
-                sys.exit(0)
-        except OSError, e:
-            print >>sys.stderr, "fork #2 failed: %d (%s)" % (e.errno, e.strerror)
-            sys.exit(1)
-        really_main()
+      assert False, "Noniplemented"
 
 if __name__ == "__main__":
     main()
