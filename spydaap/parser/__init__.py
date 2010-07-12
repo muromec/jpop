@@ -14,46 +14,57 @@
 #along with Spydaap. If not, see <http://www.gnu.org/licenses/>.
 
 import os, re
-from spydaap.daap import do
 
 class Parser:
-    def handle_string_tags(self, map, md, daap):
-        h = {}
-        for k in md.tags.keys():
-            if map.has_key(k):
-                tag = [ unicode(t) for t in md.tags[k] ]
-                tag = [ t for t in tag if t != "" ]
-                if not(h.has_key(map[k])): h[map[k]] = []
-                h[map[k]] = h[map[k]] + tag
-        for k in h.keys():
-            h[k].sort()
-            daap.append(do(k, "/".join(h[k])))
+    def handle(self, md, data=None):
+      if data == None:
+        data = {}
 
-    def handle_int_tags(self, map, md, daap):
-        for k in md.tags.keys():
-            if map.has_key(k):
-                val = md.tags[k]
-                if type(val) == list:
-                    val = val[0]
-                intval = self.my_int(unicode(val))
-                if intval: daap.append(do(map[k], intval))
+      for k in md.tags.keys():
+        if not k in self.MAP:
+          continue
 
-    def add_file_info(self, filename, daap):
-        statinfo = os.stat(filename)
-        daap.extend([do('daap.songsize', os.path.getsize(filename)),
-                     do('daap.songdateadded', statinfo.st_ctime),
-                     do('daap.songdatemodified', statinfo.st_ctime)])
+        key, typ = self.MAP[k]
+
+        val = getattr(self, "typ_%s" % typ)(md.tags[k])
+
+        data[key] = val
+
+      return data
+
+    def typ_s(self, data):
+      if type(data) == str:
+        return data.decode('utf8')
+      else:
+        return unicode(data)
+
+    def typ_i(self, data):
+      try:
+        return int(data)
+      except:
+        return 0
+
+    def parse(self, filename):
+      d = {}
+      md = self.parser_get(filename)
+
+      if md and md.tags != None:
+        self.handle(md, d)
+
+      self.add_file_info(filename, d)
+      self.set_itemname_if_unset(os.path.basename(filename), d)
+      return d
+
+
+    def add_file_info(self, filename, data):
+      statinfo = os.stat(filename)
+      data.update(
+        {
+          'size': os.path.getsize(filename),
+          'mtime': statinfo.st_ctime,
+        }
+      )
+        
     
-    def set_itemname_if_unset(self, name, daap):
-        for d in daap:
-            if d.code == 'minm': return d.value
-        daap.extend([do('minm', name)])
-        return name
-
-    def clean_int_string(self, s):
-        return re.sub(u'[^0-9]', '', unicode(s))
-    
-    def my_int(self, s):
-        try:
-            return int(self.clean_int_string(s))
-        except: return None
+    def set_itemname_if_unset(self, name, data):
+      data['name'] = data.get('name', name)

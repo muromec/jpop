@@ -13,237 +13,73 @@
 #You should have received a copy of the GNU General Public License
 #along with Spydaap. If not, see <http://www.gnu.org/licenses/>.
 
-import BaseHTTPServer, errno, logging, os, re, urlparse, socket, spydaap, sys, traceback
-from spydaap.daap import do
+import BaseHTTPServer, errno, logging, os, re, urlparse, socket, sys, traceback
+from simplejson import dumps
 
-def makeDAAPHandlerClass(server_name, cache, md_cache, container_cache):
-    session_id = 1
-    log = logging.getLogger('spydaap.server')
-    daap_server_revision = 1
+class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
 
-    class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
-        protocol_version = "HTTP/1.1"
-
-        def h(self, data, **kwargs):
-            self.send_response(kwargs.get('status', 200))
-            self.send_header('Content-Type', kwargs.get('type', 'application/x-dmap-tagged'))
-            self.send_header('DAAP-Server', 'Simple')
-            self.send_header('Expires', '-1')
-            self.send_header('Cache-Control', 'no-cache')
-            self.send_header('Accept-Ranges', 'bytes')
-            self.send_header('Content-Language', 'en_us')
-            if kwargs.has_key('extra_headers'):
-                for k, v in kwargs['extra_headers'].iteritems():
-                    self.send_header(k, v)
-            try:
-                if type(data) == file:
-                    self.send_header("Content-Length", str(os.stat(data.name).st_size))
-                else:
-                    self.send_header("Content-Length", len(data))                   
-            except:
-                pass
-            self.end_headers()
-            if hasattr(self, 'isHEAD') and self.isHEAD:
-                pass
+    def h(self, data, **kwargs):
+        self.send_response(kwargs.get('status', 200))
+        self.send_header('Content-Type', kwargs.get('type', 'text/javascript'))
+        self.send_header('Cache-Control', 'no-cache')
+        self.send_header('Accept-Ranges', 'bytes')
+        try:
+            if type(data) == file:
+                self.send_header("Content-Length", str(os.stat(data.name).st_size))
             else:
-                try:
-                    if (hasattr(data, 'next')):
-                        for d in data:
-                            self.wfile.write(d)
-                    else:
-                        self.wfile.write(data)
-                except socket.error, ex:
-                    if ex.errno in [errno.ECONNRESET]: pass
-                    else: raise
-            if (hasattr(data, 'close')):
-                data.close()
+                self.send_header("Content-Length", len(data))                   
+        except:
+            pass
 
-        #itunes sends request for:
-        #GET daap://192.168.1.4:3689/databases/1/items/626.mp3?seesion-id=1
-        #so we must hack the urls; annoying.
-        itunes_re = '^(?://[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]+)?'
-        drop_q = '(?:\\?.*)?$'
+        self.end_headers()
+        if getattr(self, 'isHEAD', None):
+          return
 
-        URLS = {
-            '/$' : "login",
-            '/server-info$' : "server_info",
-            '/content-codes$' : "content_codes",
-            '/databases$' : "database_list",
-            '/databases/([0-9]+)/items$' : "item_list",
-            '/databases/([0-9]+)/items/([0-9]+)\\.([0-9a-z]+)' + drop_q : "item",
-            '/databases/([0-9]+)/containers$' : "container_list",
-            '/databases/([0-9]+)/containers/([0-9]+)/items$' : "container_item_list",
-            '^/login$' : "login",
-            '^/logout$' : "logout",
-            '^/update$' : "update",
-        }
-
-        _URLS = {}
-        for url in URLS.keys():
-          k = re.compile(itunes_re + url)
-          _URLS[k] = URLS.get(url)
-
-        URLS = _URLS
-
-        def do_GET(self):
-            parsed_path = urlparse.urlparse(self.path).path
-            for k,v in self.URLS.iteritems():
-              md = re.match(k, parsed_path)
-
-              if not md:
-                continue
-
-              args = md.groups()
-              func = getattr(self, "do_GET_" + v)
-              func(*args)
-              return
-
+        try:
+            if (hasattr(data, 'next')):
+                for d in data:
+                    self.wfile.write(d)
             else:
-                self.send_error(404)
+                self.wfile.write(data)
+        except socket.error, ex:
+            if ex.errno in [errno.ECONNRESET]: pass
+            else: raise
+        if (hasattr(data, 'close')):
+            data.close()
 
-        def do_HEAD(self):
-            self.isHEAD = True
-            self.do_GET()
+    URLS = {
+        '/server-info$' : "server_info",
+    }
 
-        def do_GET_login(self):
-            mlog = do('dmap.loginresponse',
-                      [ do('dmap.status', 200),
-                        do('dmap.sessionid', session_id) ])
-            self.h(mlog.encode())
+    _URLS = {}
+    for url in URLS.keys():
+      k = re.compile(url)
+      _URLS[k] = URLS.get(url)
 
-        def do_GET_logout(self):
-            self.send_response(204)
-            self.end_headers()
+    URLS = _URLS
 
-        def do_GET_server_info(self):
-            msrv = do('dmap.serverinforesponse',
-                      [ do('dmap.status', 200),
-                        do('dmap.protocolversion', '2.0'),
-                        do('daap.protocolversion', '3.0'),
-                        do('dmap.timeoutinterval', 1800),
-                        do('dmap.itemname', server_name),
-                        do('dmap.loginrequired', 0),
-                        do('dmap.authenticationmethod', 0),
-                        do('dmap.supportsextensions', 0),
-                        do('dmap.supportsindex', 0),
-                        do('dmap.supportsbrowse', 0),
-                        do('dmap.supportsquery', 0),
-                        do('dmap.supportspersistentids', 0),
-                        do('dmap.databasescount', 1),                
-                        #do('dmap.supportsautologout', 0),
-                        #do('dmap.supportsupdate', 0),
-                        #do('dmap.supportsresolve', 0),
-                       ])
-            self.h(msrv.encode())
+    def do_GET(self):
+        parsed_path = urlparse.urlparse(self.path).path
+        for k,v in self.URLS.iteritems():
+          md = re.match(k, parsed_path)
 
-        def do_GET_content_codes(self):
-            children = [ do('dmap.status', 200) ]
-            for code in spydaap.daap.dmapCodeTypes.keys():
-                (name, dtype) = spydaap.daap.dmapCodeTypes[code]
-                d = do('dmap.dictionary',
-                       [ do('dmap.contentcodesnumber', code),
-                         do('dmap.contentcodesname', name),
-                         do('dmap.contentcodestype',
-                            spydaap.daap.dmapReverseDataTypes[dtype])
-                         ])
-                children.append(d)
-            mccr = do('dmap.contentcodesresponse',
-                      children)
-            self.h(mccr.encode())
+          if not md:
+            continue
 
-        def do_GET_database_list(self):
-            d = do('daap.serverdatabases',
-                   [ do('dmap.status', 200),
-                     do('dmap.updatetype', 0),
-                     do('dmap.specifiedtotalcount', 1),
-                     do('dmap.returnedcount', 1),
-                     do('dmap.listing',
-                        [ do('dmap.listingitem',
-                             [ do('dmap.itemid', 1),
-                               do('dmap.persistentid', 1),
-                               do('dmap.itemname', server_name),
-                               do('dmap.itemcount', 
-                                  len(md_cache)),
-                               do('dmap.containercount', len(container_cache))])
-                          ])
-                     ])
-            self.h(d.encode())
+          args = md.groups()
+          func = getattr(self, "do_GET_" + v)
+          ret = func(*args)
+          self.h(dumps(ret))
+          return
 
-        def do_GET_item_list(self, database_id):
-            def build_item(md):
-                return do('dmap.listingitem', 
-                          [ do('dmap.itemkind', 2),
-                            do('dmap.containeritemid', md.id),
-                            do('dmap.itemid', md.id),
-                            md.get_dmap_raw()
-                            ])
+        else:
+            self.send_error(404)
 
-            def build(f):
-                children = [ build_item (md) for md in md_cache ]
-                file_count = len(children)
-                d = do('daap.databasesongs',
-                       [ do('dmap.status', 200),
-                         do('dmap.updatetype', 0),
-                         do('dmap.specifiedtotalcount', file_count),
-                         do('dmap.returnedcount', file_count),
-                         do('dmap.listing',
-                            children) ])
-                f.write(d.encode())
+    def do_HEAD(self):
+        self.isHEAD = True
+        self.do_GET()
 
-            data = cache.get('item_list', build)
-            self.h(data)
+    def do_GET_server_info(self):
+        return ('serverinforesponse', 'alive')
 
-        def do_GET_update(self):
-            mupd = do('dmap.updateresponse',
-                      [ do('dmap.status', 200),
-                        do('dmap.serverrevision', daap_server_revision),
-                        ])
-            self.h(mupd.encode())
-
-        def do_GET_item(self, database, item, format):
-            fn = md_cache.get_item_by_id(item).get_original_filename()
-            if (self.headers.has_key('Range')):
-                rs = self.headers['Range']
-                m = re.compile('bytes=([0-9]+)-([0-9]+)?').match(rs)
-                (start, end) = m.groups()
-                if end != None: end = int(end)
-                else: end = os.stat(fn).st_size
-                start = int(start)
-                f = spydaap.ContentRangeFile(fn, open(fn), start, end)
-                extra_headers={"Content-Range": "bytes %s-%s/%s"%(str(start), str(end), str(os.stat(fn).st_size))}
-                status=206
-            else: 
-                f = open(fn)
-                extra_headers={}
-                status=200
-            # this is ugly, very wrong.
-            type = "audio/%s"%(os.path.splitext(fn)[1])
-            self.h(f, type=type, status=status, extra_headers=extra_headers)
-
-        def do_GET_container_list(self, database):
-            container_do = []
-            for i, c in enumerate(container_cache):
-                d = [ do('dmap.itemid', i + 1 ),
-                      do('dmap.itemcount', len(c)),
-                      do('dmap.containeritemid', i + 1),
-                      do('dmap.itemname', c.get_name()) ]
-                if c.get_name() == 'Library': # this should be better
-                    d.append(do('daap.baseplaylist', 1))
-                else:
-                    d.append(do('com.apple.itunes.smart-playlist', 1))
-                container_do.append(do('dmap.listingitem', d))
-            d = do('daap.databaseplaylists',
-                   [ do('dmap.status', 200),
-                     do('dmap.updatetype', 0),
-                     do('dmap.specifiedtotalcount', len(container_do)),
-                     do('dmap.returnedcount', len(container_do)),
-                     do('dmap.listing',
-                        container_do)
-                     ])
-            self.h(d.encode())
-
-        def do_GET_container_item_list(self, database_id, container_id):
-            container = container_cache.get_item_by_id(container_id)
-            self.h(container.get_daap_raw())
-
-    return DAAPHandler

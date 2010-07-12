@@ -14,7 +14,6 @@
 #along with Spydaap. If not, see <http://www.gnu.org/licenses/>.
 
 import spydaap.parser.vorbis, re
-from spydaap.daap import do
 
 class FlacParser(spydaap.parser.vorbis.VorbisParser):
     file_re = re.compile(".*\\.[fF][lL][aA][cC]$")

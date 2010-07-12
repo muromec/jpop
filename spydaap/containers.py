@@ -14,7 +14,6 @@
 #along with Spydaap. If not, see <http://www.gnu.org/licenses/>.
 
 import os, struct, md5, spydaap.cache
-from spydaap.daap import do
 
 class ContainerCache(spydaap.cache.OrderedCache):
     def __init__(self, cache_dir, container_list):

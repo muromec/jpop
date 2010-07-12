@@ -16,7 +16,7 @@
 import os, playlists
 
 server_name = "spydaap"
-port = 3689
+port = 3663
 media_path = os.path.abspath("media")
 cache_dir = os.path.abspath("cache")
 container_list = [playlists.Library()]

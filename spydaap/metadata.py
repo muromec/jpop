@@ -19,7 +19,6 @@ with warnings.catch_warnings():
     import md5
 
 import os, struct, spydaap.cache, StringIO
-from spydaap.daap import do
 
 class MetadataCache(spydaap.cache.OrderedCache):
     def __init__(self, cache_dir, parsers):
@@ -39,14 +38,17 @@ class MetadataCache(spydaap.cache.OrderedCache):
                 digest = md5.md5(ffn).hexdigest()
                 marked[digest] = True
                 md = self.get_item_by_pid(digest)
-                if (not(md.get_exists()) or \
-                        (md.get_mtime() < os.stat(ffn).st_mtime)):
-                    for p in self.parsers:
-                        if p.understands(ffn):                  
-                            (m, name) = p.parse(ffn)
-                            if m != None:
-                                MetadataCacheItem.write_entry(self.dir,
-                                                              name, ffn, m)
+                if md.get_exists() and \
+                        md.get_mtime() >= os.stat(ffn).st_mtime:
+                  continue
+
+                for p in self.parsers:
+                  if not p.understands(ffn):                                   continue
+
+                  m = p.parse(ffn)
+                  if m != None:
+                    MetadataCacheItem.write_entry(
+                        self.dir, m.get('name'), ffn, m)
         if not(link):
             for item in os.listdir(self.dir):
                 if (len(item) == 32) and not(marked.has_key(item)):
