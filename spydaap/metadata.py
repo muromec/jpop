@@ -15,12 +15,17 @@
 
 import os
 
+import db
+
 class MetadataCache(object):
   def __init__(self, cache_dir, parsers):
     self.parsers = parsers
     self.dir = cache_dir
 
+    self.cached, self.parsed, self.skipped = 0,0,0
+
   def build(self, dir, link=False):
+
     for path, dirs, files in os.walk(dir):
       for d in dirs:
         if os.path.islink(os.path.join(path, d)):
@@ -28,14 +33,28 @@ class MetadataCache(object):
 
       for fn in files:
         ffn = os.path.join(path, fn)
-        digest = md5.md5(ffn).hexdigest()
 
         # TODO: check if newer
         # os.stat(ffn).st_mtime
-        print ffn
+        if ffn in db.Manager.ALL:
+          current = int(os.stat(ffn).st_mtime)
+          saved = db.Manager.ALL.get(ffn)
+
+          if saved == current:
+            self.cached+=1
+            continue
 
         for p in self.parsers:
           if not p.understands(ffn):
             continue
 
           m = p.parse(ffn)
+          self.parsed+=1
+
+          db.Manager.process(m)
+          break
+
+        else:
+          self.skipped+=1
+
+    db.Manager.flush()

@@ -15,6 +15,7 @@
 
 import BaseHTTPServer, errno, logging, os, re, urlparse, socket, sys, traceback
 from simplejson import dumps
+from spydaap.db import DB_REGEX, Manager
 
 class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
@@ -50,6 +51,9 @@ class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     URLS = {
         '/server-info$' : "server_info",
+        '/db$' : 'db_list',
+        '/db/(%s)$' % DB_REGEX : 'db_keys',
+        '/db/(%s)/(.*)$' % DB_REGEX : 'db_value',
     }
 
     _URLS = {}
@@ -61,6 +65,7 @@ class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed_path = urlparse.urlparse(self.path).path
+        parsed_path = urlparse.unquote(parsed_path)
         for k,v in self.URLS.iteritems():
           md = re.match(k, parsed_path)
 
@@ -82,4 +87,24 @@ class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def do_GET_server_info(self):
         return ('serverinforesponse', 'alive')
+
+    def do_GET_db_keys(self, dbname):
+        return ('keys', 
+           (
+             ('dbname', dbname),
+             ('keys', Manager.DB[dbname].keys()),
+          )
+        )
+
+    def do_GET_db_value(self, dbname, key):
+        return ("value",
+            (
+              ("dbname", dbname),
+              ("key", key),
+              ("values", Manager.DB[dbname].get(key)),
+            )
+        )
+
+    def do_GET_db_list(self,):
+        return ("list", Manager.DB.keys())
 

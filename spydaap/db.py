@@ -129,3 +129,5 @@ class Manager(object):
 
 Manager.create_db()
 Manager.remove_missing()
+
+DB_REGEX = str.join("|", Manager.NAMES)

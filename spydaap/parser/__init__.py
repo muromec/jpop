@@ -45,7 +45,7 @@ class Parser:
         return 0
 
     def parse(self, filename):
-      d = {}
+      d = {'file': filename}
       md = self.parser_get(filename)
 
       if md and md.tags != None:
@@ -61,10 +61,9 @@ class Parser:
       data.update(
         {
           'size': os.path.getsize(filename),
-          'mtime': statinfo.st_ctime,
+          'mtime': int(statinfo.st_mtime),
         }
       )
-        
-    
+
     def set_itemname_if_unset(self, name, data):
       data['name'] = data.get('name', name)
