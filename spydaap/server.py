@@ -96,19 +96,15 @@ class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def do_GET_db_keys(self, dbname):
         return ('keys', 
-           (
-             ('dbname', dbname),
-             ('keys', Manager.DB[dbname].keys()),
-          )
+            Manager.DB[dbname].keys(),
+            dbname,
         )
 
     def do_GET_db_value(self, dbname, key):
         return ("value",
-            (
-              ("dbname", dbname),
-              ("key", key),
-              ("values", Manager.DB[dbname].get(key)),
-            )
+            Manager.DB[dbname].get(key),
+            dbname,
+            key,
         )
 
     def do_GET_db_list(self,):
