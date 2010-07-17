@@ -124,8 +124,6 @@ class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             md.INDEXES
         )
 
-        print indexes
-
         return ('data', 
             md.fget(areq),
             indexes,
