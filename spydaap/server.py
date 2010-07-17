@@ -15,10 +15,23 @@
 
 import BaseHTTPServer, errno, logging, os, re, urlparse, socket, sys, traceback
 from simplejson import dumps
-from spydaap.db import DB_REGEX, Manager
+
+import config
+import spydaap
+import spydaap.metadata
+
+md = spydaap.metadata.MetadataCache(
+    spydaap.media_path,
+    spydaap.parsers,
+)
+
 
 class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
+
+    def address_string(self):
+        host, port = self.client_address[:2]
+        return host
 
     def h(self, data, **kwargs):
         self.send_response(kwargs.get('status', 200))
@@ -51,9 +64,9 @@ class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     URLS = {
         '/server-info$' : "server_info",
-        '/db$' : 'db_list',
-        '/db/(%s)$' % DB_REGEX : 'db_keys',
-        '/db/(%s)/(.*)$' % DB_REGEX : 'db_value',
+    #    '/list$' : 'db_list',
+        '/db$' : 'db_info',
+        '/db/(.*)$' : 'db_index',
         '/fetch/([a-f0-9]{32})$' : 'fetch',
     }
 
@@ -94,26 +107,47 @@ class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def do_GET_server_info(self):
         return ('serverinforesponse', 'alive')
 
-    def do_GET_db_keys(self, dbname):
-        return ('keys', 
-            Manager.DB[dbname].keys(),
-            dbname,
+    def do_GET_db_index(self, req):
+        areq = tuple(req.split("/"))
+
+        path = ()
+        for x in range((len(areq)+1)/2):
+          step = areq[x*2]
+          path += (step,)
+
+          if path not in md.INDEXES:
+            return # 404
+
+        plen = len(path)
+        indexes = filter(
+            lambda idx : idx[:plen] == path,
+            md.INDEXES
         )
 
-    def do_GET_db_value(self, dbname, key):
-        return ("value",
-            Manager.DB[dbname].get(key),
-            dbname,
-            key,
+        print indexes
+
+        return ('data', 
+            md.fget(areq),
+            indexes,
         )
 
-    def do_GET_db_list(self,):
-        return ("list", Manager.DB.keys())
+    def do_GET_db_info(self):
+      return (
+          "indexes",
+          map(
+            lambda idx : idx[0],
+            filter(
+              lambda idx : len(idx) == 1,
+              md.INDEXES,
+            ),
+          ),
+          md.INDEXES,
+      )
 
     def do_GET_fetch(self, fhash):
-        if not fhash in Manager.ALL:
-          return
+      fname = "%s/media/%s" %(spydaap.cache_dir, fhash)
 
-        mtime, fname = Manager.ALL.get(fhash)
-
-        return open(fname, 'rb')
+      if not os.access(fname, 0):
+        return
+      
+      return open(fname, 'rb')

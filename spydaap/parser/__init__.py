@@ -47,7 +47,6 @@ class Parser:
 
     def parse(self, filename):
       d = {
-          'file': filename,
           'fhash' : md5(filename).hexdigest(),
       }
       md = self.parser_get(filename)

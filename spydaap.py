@@ -40,8 +40,8 @@ class MyThreadedHTTPServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServe
         self.keep_running = False
         self.server_close()
 
-def rebuild_cache(signum=None, frame=None):
-    md_cache.build(os.path.abspath(spydaap.media_path))
+#def rebuild_cache(signum=None, frame=None):
+#    md_cache.build(os.path.abspath(spydaap.media_path))
 
 def usage():
     sys.stderr.write("Usage: %s [OPTION]\n"%(sys.argv[0]))
@@ -58,7 +58,7 @@ def make_shutdown(httpd):
     return _shutdown
 
 def really_main():
-    rebuild_cache()
+    #rebuild_cache()
     zeroconf = spydaap.zeroconf.Zeroconf(spydaap.server_name,
                                          spydaap.port,  
                                          stype="_jpop._tcp")
@@ -70,7 +70,7 @@ def really_main():
     )
     
     signal.signal(signal.SIGTERM, make_shutdown(httpd))
-    signal.signal(signal.SIGHUP, rebuild_cache)
+    #signal.signal(signal.SIGHUP, rebuild_cache)
 
     while httpd.keep_running:
         try:
