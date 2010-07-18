@@ -13,7 +13,7 @@
 #You should have received a copy of the GNU General Public License
 #along with Spydaap. If not, see <http://www.gnu.org/licenses/>.
 
-import BaseHTTPServer, errno, logging, os, re, urlparse, socket, sys, traceback
+import BaseHTTPServer, errno, logging, os, re, urllib, socket, sys, traceback
 from simplejson import dumps
 
 import config
@@ -78,8 +78,7 @@ class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     URLS = _URLS
 
     def do_GET(self):
-        parsed_path = urlparse.urlparse(self.path).path
-        parsed_path = urlparse.unquote(parsed_path)
+        parsed_path = urllib.unquote_plus(self.path)
         for k,v in self.URLS.iteritems():
           md = re.match(k, parsed_path)
 
@@ -115,17 +114,19 @@ class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
           step = areq[x*2]
           path += (step,)
 
-          if path not in md.INDEXES:
-            return # 404
+        if path not in md.INDEXES:
+          print 'not in index', path
+          return # 404
 
         plen = len(path)
         indexes = filter(
-            lambda idx : idx[:plen] == path,
+            lambda idx : len(idx) > plen and idx[:plen] == path,
             md.INDEXES
         )
 
         return ('data', 
             md.fget(areq),
+            map(lambda x :x[plen], indexes),
             indexes,
         )
 

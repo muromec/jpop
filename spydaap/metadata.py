@@ -22,11 +22,14 @@ import spydaap
 class MetadataCache(object):
   INDEXES = (
     ("album",),
+
     ("artist", "album",),
     ("artist",),
-    ("genre",),
+
+    ("genre","artist", "album"),
+    ("genre","artist",),
     ("genre","album",),
-    ("genre","artitst", "album"),
+    ("genre",),
   )
 
   def __init__(self, cache_dir, parsers):
