@@ -126,7 +126,7 @@ class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         return ('data', 
             md.fget(areq),
-            map(lambda x :x[plen], indexes),
+            list(set(map(lambda x :x[plen], indexes))),
             indexes,
         )
 
