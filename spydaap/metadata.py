@@ -181,16 +181,18 @@ class MetadataCache(object):
         return
 
     fname = reduce(
-        lambda a, idxv : a+(idxv, song.get(idxv).encode('utf8')),
+        lambda a, idxv : a+(idxv, song.get(idxv)),
         idx,
         (),
     )
 
     # write index
-    old = self.fget(fname[:-1]) or []
-    if fname[-1] not in old:
-      old.append( fname[-1] )
-      self.fset(fname[:-1], old)
+    path = fname[:-1]
+    name = fname[-1]
+    old = self.fget(path) or []
+    if name not in old:
+      old.append( name  )
+      self.fset(path, old)
 
     # write song info
     old = self.fget(fname) or []
@@ -199,12 +201,13 @@ class MetadataCache(object):
 
     return fname
 
-  def build(self, link=False):
+  def build(self, dir=None):
+    dir = dir or self.dir
 
-    for path, dirs, files in os.walk(self.dir):
+    for path, dirs, files in os.walk(dir):
       for d in dirs:
         if os.path.islink(os.path.join(path, d)):
-            self.build(os.path.join(path,d), True)
+            self.build(os.path.join(path,d), )
 
       map(
           lambda fn:self.identify(os.path.join(path, fn)),
