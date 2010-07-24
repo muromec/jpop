@@ -61,7 +61,7 @@ class MetadataCache(object):
     cachename = "%s/media/%s" % (
         spydaap.cache_dir, fhash
     )
-    f = db.IndexLinks(linkfname)
+    f = db.IndexLinks(fhash).f
     data = load(f)
     f.close()
 
@@ -119,7 +119,7 @@ class MetadataCache(object):
         links.append( idx )
 
 
-      f = db.IndexLinks(linkfname, 'wb')
+      f = db.IndexLinks(fhash, 'wb').f
       f.truncate()
       dump(links, f)
       f.close()
@@ -144,6 +144,7 @@ class MetadataCache(object):
     old = db.fget(path) or []
     if name not in old:
       old.append( name  )
+      old.sort()
       db.fset(path, old)
 
     # write song info

@@ -18,10 +18,6 @@ class Index:
 
   def __init__(self, fname, mode='rb'):
     self.f = open(self.TEMPLATE % fname, mode)
-    return self.f
-
-  def __delete__(self,):
-    self.f.close()
 
 class IndexLinks(Index):
   TEMPLATE =  spydaap.cache_dir + "/indexlinks/%s.js"
@@ -69,7 +65,7 @@ class DB(object):
   @classmethod
   def writeindex(cls, fname, data):
 
-    f = Index(fname, 'wb')
+    f = Index(fname, 'wb').f
     f.truncate()
     dump(data, f)
     f.close()
