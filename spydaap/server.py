@@ -19,6 +19,7 @@ from simplejson import dumps
 import config
 import spydaap
 import spydaap.metadata
+import db
 
 md = spydaap.metadata.MetadataCache(
     spydaap.media_path,
@@ -125,7 +126,7 @@ class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         )
 
         return ('data', 
-            md.fget(areq),
+            db.fget(areq),
             list(set(map(lambda x :x[plen], indexes))),
             indexes,
         )
