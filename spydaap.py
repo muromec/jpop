@@ -58,10 +58,12 @@ def make_shutdown(httpd):
     return _shutdown
 
 def really_main():
-    #rebuild_cache()
-    zeroconf = spydaap.zeroconf.Zeroconf(spydaap.server_name,
-                                         spydaap.port,  
-                                         stype="_jpop._tcp")
+    zeroconf = spydaap.zeroconf.Zeroconf(
+        spydaap.server_name,
+        spydaap.port,  
+        stype="_jpop._tcp",
+        text = [spydaap.uniq, spydaap.white],
+    )
     zeroconf.publish()
     log.warn("Listening.")
     httpd = MyThreadedHTTPServer(
@@ -70,7 +72,6 @@ def really_main():
     )
     
     signal.signal(signal.SIGTERM, make_shutdown(httpd))
-    #signal.signal(signal.SIGHUP, rebuild_cache)
 
     while httpd.keep_running:
         try:
