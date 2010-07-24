@@ -18,6 +18,7 @@ from hashlib import md5
 from simplejson import dump, load
 
 import spydaap
+import db
 
 class MetadataCache(object):
   INDEXES = (
@@ -36,48 +37,7 @@ class MetadataCache(object):
     self.parsers = parsers
     self.dir = os.path.abspath(cache_dir)
 
-    self.cached, self.parsed, self.skipped = 0,0,0
-
-    self.data = {}
-
-  def fget(self, key):
-
-    if key in self.data:
-      return self.data.get(key)
-
-    fname = md5(str(key)).hexdigest()
-
-    f = None
-    try:
-      f = open("%s/%s.js" % (spydaap.cache_dir,fname), 'rb')
-      return load(f)
-    except:
-      return
-    finally:
-      if f:
-        f.close()
-
-  def fset(self, key, data):
-    self.data[key] = data
-
-    if len(self.data) > 10:
-      self.flush()
-
-  def flush(self):
-
-    for key, data in self.data.iteritems():
-      self.writeindex(key, data)
-
-    self.data.clear()
-
-  def writeindex(self, key, data):
-    fname = md5(str(key)).hexdigest()
-
-    f = open("%s/%s.js" % (spydaap.cache_dir,fname), 'wb')
-    f.truncate()
-    dump(data, f)
-    f.close()
-
+  
   def check_all(self,):
 
     media = spydaap.cache_dir+"/media/"
@@ -98,25 +58,20 @@ class MetadataCache(object):
       self.invalidate(fname)
 
   def invalidate(self, fhash):
-    print 'inval', fhash
-    linkfname = "%s/indexlinks/%s.js" % (
-          spydaap.cache_dir, fhash
-    )
     cachename = "%s/media/%s" % (
         spydaap.cache_dir, fhash
     )
-    f = open(linkfname, 'rb')
+    f = db.IndexLinks(linkfname)
     data = load(f)
     f.close()
 
     for idx in data:
-      idx_data = self.fget(idx)
+      idx_data = db.fget(idx)
 
       for el in idx_data:
         if el['fhash'] == fhash:
-          print el
           idx_data.remove(el)
-          self.fset(idx, idx_data)
+          db.fset(idx, idx_data)
           break
 
     try:
@@ -161,13 +116,10 @@ class MetadataCache(object):
         if not idx:
           continue
 
-        links.append( str(idx) )
+        links.append( idx )
 
 
-      linkfname = "%s/indexlinks/%s.js" % (
-          spydaap.cache_dir, fhash
-      )
-      f = open(linkfname, 'wb')
+      f = db.IndexLinks(linkfname, 'wb')
       f.truncate()
       dump(links, f)
       f.close()
@@ -189,15 +141,15 @@ class MetadataCache(object):
     # write index
     path = fname[:-1]
     name = fname[-1]
-    old = self.fget(path) or []
+    old = db.fget(path) or []
     if name not in old:
       old.append( name  )
-      self.fset(path, old)
+      db.fset(path, old)
 
     # write song info
-    old = self.fget(fname) or []
+    old = db.fget(fname) or []
     old.append(song)
-    self.fset(fname, old)
+    db.fset(fname, old)
 
     return fname
 

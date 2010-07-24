@@ -2,6 +2,7 @@ import os
 import config
 import spydaap
 import spydaap.metadata
+from spydaap import db
 
 md_cache = spydaap.metadata.MetadataCache(
     spydaap.media_path,
@@ -10,4 +11,4 @@ md_cache = spydaap.metadata.MetadataCache(
 
 md_cache.check_all()
 md_cache.build()
-md_cache.flush()
+db.flush()
