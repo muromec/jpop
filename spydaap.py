@@ -62,7 +62,7 @@ def really_main():
         spydaap.server_name,
         spydaap.port,  
         stype="_jpop._tcp",
-        text = [ "%s\t%s" %(spydaap.uniq, spydaap.white)],
+        text = [spydaap.uniq, spydaap.white],
     )
     zeroconf.publish()
     log.warn("Listening.")
