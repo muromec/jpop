@@ -42,59 +42,31 @@ def search_albums(links, words):
 def search(words, base=BASE_URL, level=0):
   print 'search', words, base
 
-  ret = url_get(base)
-  deep = []
-  foundall = []
+  html = url_get(base)
+  ret = []
 
-  for link in links(ret):
+  for link in links(html):
     #print link
 
     name = link.lower()
+    name = re.sub(r'(\.|_)', ' ', name)[:-1]
 
     first = True
+    notfound = []
     match = 0
     for w in words:
-      if w in name:
-        match += 1
-        
-        if first:
-          deep.append(link)
+      if w not in name:
+        notfound.append(w)
 
-      first = False
+    if words:
+      if notfound == words:
+        continue
 
-    if match == len(words):
-      foundall.append(link)
-
-
-  if foundall:
-    print 'haha, found all', foundall
-
-    if level == 0:
-      _ret = map(
-          lambda x : search([], base+x, level+1),
-          foundall
-      )
+    if words and level == 0:
+      if words[0] not in notfound:
+        ret.extend(search(notfound, base+link, level+1))
     else:
-      _ret = [
-          map(
-            lambda x : (x, base+x),
-            foundall
-          )
-      ]
-
-  elif deep:
-    print 'go deep'
-    _ret = map(
-        lambda x : search(words[1:], base+x, level+1),
-        deep
-    )
-    print 'deep', _ret
-  else:
-    return []
-
-  ret = [] 
-  for chunk in _ret:
-    ret.extend(chunk)
+      ret.append( (name, base+link) )
 
   return ret
 
@@ -109,6 +81,9 @@ if __name__ == '__main__':
   words = map(str.lower, request.split())
 
   got = search(words)
+
+  if not got:
+    print 'nothing'
 
   for name, url in got:
     print 'URL',name, url
