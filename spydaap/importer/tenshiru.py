@@ -70,7 +70,10 @@ def search(words, base=BASE_URL, level=0):
     print 'haha, found all', foundall
 
     if level == 0:
-      _ret = list_albums(foundall)
+      _ret = map(
+          lambda x : search([], base+x, level+1),
+          foundall
+      )
     else:
       _ret = [
           map(
@@ -107,4 +110,5 @@ if __name__ == '__main__':
 
   got = search(words)
 
-  print got
+  for name, url in got:
+    print 'URL',name, url
