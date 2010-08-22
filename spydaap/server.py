@@ -19,6 +19,7 @@ from simplejson import dumps
 import config
 import spydaap
 import spydaap.metadata
+from spydaap import search
 import db
 
 md = spydaap.metadata.MetadataCache(
@@ -69,6 +70,7 @@ class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         '/db$' : 'db_info',
         '/db/(.*)$' : 'db_index',
         '/fetch/([a-f0-9]{32})$' : 'fetch',
+        '/search/(.*)$' : 'search',
     }
 
     _URLS = {}
@@ -129,6 +131,14 @@ class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             db.fget(areq),
             list(set(map(lambda x :x[plen], indexes))),
             indexes,
+        )
+
+    def do_GET_search(self, req):
+        return  (
+            'search',
+            search.process(req),
+            [],
+            [],
         )
 
     def do_GET_db_info(self):
