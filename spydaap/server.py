@@ -54,6 +54,15 @@ class DAAPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         try:
             if (hasattr(data, 'next')):
+                brange =  self.headers.get("Range")
+                if brange and 'bytes=' == brange[:6]:
+                  seek = brange[6:].split('-')[0]
+
+                  try:
+                    data.seek(int(seek))
+                  except:
+                    pass
+
                 for d in data:
                     self.wfile.write(d)
             else:
