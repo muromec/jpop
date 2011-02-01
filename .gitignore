@@ -3,3 +3,8 @@ cache
 *.pid
 *.log
 media
+build/
+share/
+bin/
+lib/
+include/
