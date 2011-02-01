@@ -84,7 +84,7 @@ def really_main():
     zeroconf.unpublish()
 
 def main():
-    daemonize = True
+    daemonize = False
     logfile = os.path.abspath("spydaap.log")
     pidfile = os.path.abspath("spydaap.pid")
     uid = os.getuid()
@@ -107,7 +107,7 @@ def main():
                 uid = pwd.getpwnam(a)[2]
             else:
                 assert False, "unhandled option"
-    except getopt.GetoptError, err:
+    except getopt.GetoptError as err:
         # print help information and exit:
         sys.stderr.write(str(err))
         usage()
